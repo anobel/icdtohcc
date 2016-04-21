@@ -99,6 +99,22 @@ icdhcc <- rbind(icdhcc, extracodes)
 rm(extracodes)
 ```
 
+### Import Labels
+```{r}
+# Import most recent HCC labels
+labels <- readLines("crosswalks/importable_xw/labels/V20H87L1.TXT")
+
+# Extract HCC numbers
+hccnum <- str_match(labels, "HCC([:digit:]*)")[,2]
+
+# Extract HCC names
+hccname <- str_match(labels, "(\")([:print:]*)(\")")[,3]
+
+# Combine numbers and names into dataframe of labels
+labels <- as.data.frame(cbind(hccnum, hccname))
+labels <- labels[!is.na(labels$hccname),]
+rm(hccnum, hccname)
+```
 
 ### References
 - https://www.cms.gov/Medicare/Health-Plans/MedicareAdvtgSpecRateStats/Risk-Adjustors.html

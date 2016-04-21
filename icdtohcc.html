@@ -230,6 +230,22 @@ colnames(extracodes) &lt;- c(&quot;icd&quot;, &quot;hcc&quot;, &quot;year&quot;,
 icdhcc &lt;- rbind(icdhcc, extracodes)
 rm(extracodes)</code></pre>
 </div>
+<div id="import-labels" class="section level3">
+<h3>Import Labels</h3>
+<pre class="r"><code># Import most recent HCC labels
+labels &lt;- readLines(&quot;crosswalks/importable_xw/labels/V20H87L1.TXT&quot;)
+
+# Extract HCC numbers
+hccnum &lt;- str_match(labels, &quot;HCC([:digit:]*)&quot;)[,2]
+
+# Extract HCC names
+hccname &lt;- str_match(labels, &quot;(\&quot;)([:print:]*)(\&quot;)&quot;)[,3]
+
+# Combine numbers and names into dataframe of labels
+labels &lt;- as.data.frame(cbind(hccnum, hccname))
+labels &lt;- labels[!is.na(labels$hccname),]
+rm(hccnum, hccname)</code></pre>
+</div>
 <div id="references" class="section level3">
 <h3>References</h3>
 <ul>
