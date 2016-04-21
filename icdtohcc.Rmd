@@ -1,0 +1,67 @@
+# ICD to HCC
+
+### Generate Medicare Hierchical Condition Categories (HCC) based on ICD codes
+
+### Introduction
+- many to many relationship
+- ICD9/10 are mapped to Condition Categories (CC), and a hierarchy based on disease severity is applied to the CCs to generate HCCs. For example, if a patient has ICDs (and subsequently CC) for diabetes without complications and diabetes with complications, they are only assigned to the most severe HCC, which in this case would be diabetes with complications.
+
+### Data
+The ICD/HCC mappings were obtained from [CMS](https://www.cms.gov/Medicare/Health-Plans/MedicareAdvtgSpecRateStats/Risk-Adjustors.html). CMS provides SAS macros for assigning HCCs and HCC scores based on ICDs, adjusted annually. We have implemented assigning HCCs (but not scores) in R. The original data is available from CMS, or in the github repository at /crosswalks/originalCMS_xw.
+
+Between 2007-2012, there were 70 HCCs (Version 12). In 2013, this was expanded to 87 (Version 20). We use the labels for the more inclusive mappings (post-2013) for all years for consistency. This means that in pre-2013 data 17 HCCs will be structurally zero. 
+### Packages
+```{r}
+library(stringr)
+library(dplyr)
+```
+
+### Import ICD9 - HCC crosswalks
+These are the files in the crosswalk folders. This naming convention allows use of the year from filenames in organizing the data later.
+
+```{r}
+# ICD-9
+list.files("crosswalks/importable_xw/icd9/")
+
+# ICD-10
+list.files("crosswalks/importable_xw/icd10/")
+```
+
+Import the ICD9 and ICD10 HCC crosswalks, one per year, into a list of dataframes
+```{r} 
+icd9hcc <- apply(data.frame(paste("crosswalks/importable_xw/icd9/",list.files("crosswalks/importable_xw/icd9/"),sep="")), 1, FUN=read.fwf, width=c(7,4), header=F, stringsAsFactors=F)
+
+icd10hcc <- apply(data.frame(paste("crosswalks/importable_xw/icd10/",list.files("crosswalks/importable_xw/icd10/"),sep="")), 1, FUN=read.fwf, width=c(7,4), header=F, stringsAsFactors=F)
+
+# Create a vector of year names based on the file names in the icd folders
+years <- list()
+years$icd9 <- as.numeric(substr(list.files("crosswalks/importable_xw/icd9/"), 0,4))
+years$icd10 <- as.numeric(substr(list.files("crosswalks/importable_xw/icd10/"), 0,4))
+
+# assign year to each dataframe within the list of dataframes
+icd9hcc <- mapply(cbind, icd9hcc, "year" = years$icd9, SIMPLIFY=F)
+icd10hcc <- mapply(cbind, icd10hcc, "year" = years$icd10, SIMPLIFY=F)
+
+# Row bind icd9 and icd10 from different years into despective dataframes
+icd9hcc <- rbind_all(icd9hcc)
+icd10hcc <- rbind_all(icd10hcc)
+
+# Assign ICD version (9 or 10) and combine into single dataframe
+icd9hcc$icdversion <- 9
+icd10hcc$icdversion <- 10
+icdhcc <- rbind(icd9hcc, icd10hcc)
+
+rm(icd9hcc, icd10hcc, years)
+
+# add variable names
+colnames(icdhcc) <- c("icd", "hcc", "year", "icdversion")
+
+# Remove whitespace from codes
+icdhcc$icd <- str_trim(icdhcc$icd)
+icdhcc$hcc <- str_trim(icdhcc$hcc)
+```
+
+
+### References
+- https://www.cms.gov/Medicare/Health-Plans/MedicareAdvtgSpecRateStats/Risk-Adjustors.html
+- https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Reports/downloads/pope_2000_2.pdf
