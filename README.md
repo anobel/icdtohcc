@@ -1,2 +1,2 @@
 # icdtohcc
-Generating Medicare HCC codes from ICD codes
+[Generating Medicare HCC codes from ICD codes](idctohcc.Rmd)
