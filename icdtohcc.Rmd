@@ -61,6 +61,11 @@ icdhcc$icd <- str_trim(icdhcc$icd)
 icdhcc$hcc <- str_trim(icdhcc$hcc)
 ```
 
+```{r}
+head(icdhcc)
+```
+
+
 
 ### References
 - https://www.cms.gov/Medicare/Health-Plans/MedicareAdvtgSpecRateStats/Risk-Adjustors.html
