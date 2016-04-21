@@ -59,11 +59,14 @@ colnames(icdhcc) <- c("icd", "hcc", "year", "icdversion")
 # Remove whitespace from codes
 icdhcc$icd <- str_trim(icdhcc$icd)
 icdhcc$hcc <- str_trim(icdhcc$hcc)
+
+head(icdhcc)
 ```
 
 ```{r}
 head(icdhcc)
 ```
+
 
 
 
