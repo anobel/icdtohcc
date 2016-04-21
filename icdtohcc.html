@@ -124,7 +124,7 @@ $(document).ready(function () {
 <h3>Introduction</h3>
 <ul>
 <li>many to many relationship</li>
-<li>ICD9/10 are mapped to Condition Categories (CC), and a hierarchy based on disease severity is applied to the CCs to generate HCCs. For example, if a patient has ICDs (and subsequently CC) for diabetes without complications and diabetes with complications, they are only assigned to the most severe HCC, which in this case would be diabetes with complications.</li>
+<li>ICD9/10 are mapped to Condition Categories (CC), and a hierarchy based on disease severity is applied to the CCs to generate HCCs.</li>
 </ul>
 </div>
 <div id="data" class="section level3">
@@ -232,7 +232,7 @@ rm(extracodes)</code></pre>
 </div>
 <div id="import-labels" class="section level3">
 <h3>Import Labels</h3>
-<pre class="r"><code># Import most recent HCC labels
+<pre class="r"><code># Import most inclusive HCC labels (2013)
 labels &lt;- readLines(&quot;crosswalks/importable_xw/labels/V20H87L1.TXT&quot;)
 
 # Extract HCC numbers
@@ -245,6 +245,9 @@ hccname &lt;- str_match(labels, &quot;(\&quot;)([:print:]*)(\&quot;)&quot;)[,3]
 labels &lt;- as.data.frame(cbind(hccnum, hccname))
 labels &lt;- labels[!is.na(labels$hccname),]
 rm(hccnum, hccname)</code></pre>
+</div>
+<div id="hierarchy" class="section level3">
+<h3>Hierarchy</h3>
 </div>
 <div id="references" class="section level3">
 <h3>References</h3>
