@@ -197,6 +197,39 @@ icdhcc$hcc &lt;- str_trim(icdhcc$hcc)</code></pre>
 ## 5  0064   112  2007          9
 ## 6  0074     5  2007          9</code></pre>
 </div>
+<div id="need-to-manually-enter-certain-additional-icd910s" class="section level3">
+<h3>Need to manually enter certain additional ICD9/10s</h3>
+<pre class="r"><code># icd9 40403, 40413, and 40493 are assigned to CC 80 in 2007-2012
+extracodes &lt;- list()
+extracodes$e1 &lt;- c(&quot;40403&quot;, &quot;40413&quot;, &quot;40493&quot;)
+extracodes$e1 &lt;- expand.grid(extracodes$e1, &quot;80&quot;, 2007:2012, 9, stringsAsFactors = F)
+
+# icd9 40401, 40403, 40411, 40413, 40491, 40493 are assigned to CC85 in 2013
+extracodes$e2 &lt;- c(&quot;40401&quot;,&quot;40403&quot;,&quot;40411&quot;,&quot;40413&quot;,&quot;40491&quot;,&quot;40493&quot;)
+extracodes$e2 &lt;- expand.grid(extracodes$e2, &quot;85&quot;, 2013, 9, stringsAsFactors = F)
+
+# icd9 40403, 40413, 40493 are assigned to CC85 in 2014-2015
+extracodes$e3 &lt;- c(&quot;40403&quot;,&quot;40413&quot;,&quot;40493&quot;)
+extracodes$e3 &lt;- expand.grid(extracodes$e3, &quot;85&quot;, 2014:2015, 9, stringsAsFactors = F)
+
+# icd9 3572 and 36202 are assigned to CC18 in 2013
+extracodes$e4 &lt;- c(&quot;3572&quot;, &quot;36202&quot;)
+extracodes$e4 &lt;- expand.grid(extracodes$e4, &quot;18&quot;, 2013, 9, stringsAsFactors = F)
+
+# icd9 36202 is assigned to CC18 in 2014-2015
+extracodes$e5 &lt;- &quot;36202&quot;
+extracodes$e5 &lt;- expand.grid(extracodes$e5, &quot;18&quot;, 2014:2015, 9, stringsAsFactors = F)
+
+# combine into one DF
+extracodes &lt;- rbind_all(extracodes)
+
+# add variable names
+colnames(extracodes) &lt;- c(&quot;icd&quot;, &quot;hcc&quot;, &quot;year&quot;, &quot;icdversion&quot;)
+
+# combine with full icdhcc listing
+icdhcc &lt;- rbind(icdhcc, extracodes)
+rm(extracodes)</code></pre>
+</div>
 <div id="references" class="section level3">
 <h3>References</h3>
 <ul>

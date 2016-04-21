@@ -65,7 +65,39 @@ icdhcc$hcc <- str_trim(icdhcc$hcc)
 head(icdhcc)
 ```
 
+### Need to manually enter certain additional ICD9/10s
+```{r}
+# icd9 40403, 40413, and 40493 are assigned to CC 80 in 2007-2012
+extracodes <- list()
+extracodes$e1 <- c("40403", "40413", "40493")
+extracodes$e1 <- expand.grid(extracodes$e1, "80", 2007:2012, 9, stringsAsFactors = F)
 
+# icd9 40401, 40403, 40411, 40413, 40491, 40493 are assigned to CC85 in 2013
+extracodes$e2 <- c("40401","40403","40411","40413","40491","40493")
+extracodes$e2 <- expand.grid(extracodes$e2, "85", 2013, 9, stringsAsFactors = F)
+
+# icd9 40403, 40413, 40493 are assigned to CC85 in 2014-2015
+extracodes$e3 <- c("40403","40413","40493")
+extracodes$e3 <- expand.grid(extracodes$e3, "85", 2014:2015, 9, stringsAsFactors = F)
+
+# icd9 3572 and 36202 are assigned to CC18 in 2013
+extracodes$e4 <- c("3572", "36202")
+extracodes$e4 <- expand.grid(extracodes$e4, "18", 2013, 9, stringsAsFactors = F)
+
+# icd9 36202 is assigned to CC18 in 2014-2015
+extracodes$e5 <- "36202"
+extracodes$e5 <- expand.grid(extracodes$e5, "18", 2014:2015, 9, stringsAsFactors = F)
+
+# combine into one DF
+extracodes <- rbind_all(extracodes)
+
+# add variable names
+colnames(extracodes) <- c("icd", "hcc", "year", "icdversion")
+
+# combine with full icdhcc listing
+icdhcc <- rbind(icdhcc, extracodes)
+rm(extracodes)
+```
 
 
 ### References
