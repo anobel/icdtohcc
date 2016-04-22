@@ -133,14 +133,6 @@ $(document).ready(function () {
 <p>Between 2007-2012, there were 70 HCCs (Version 12). In 2013, this was expanded to 87 (Version 20). We use the labels for the more inclusive mappings (post-2013) for all years for consistency. This means that in pre-2013 data 17 HCCs will be structurally zero. ### Packages</p>
 <pre class="r"><code>library(stringr)
 library(dplyr)</code></pre>
-<pre><code>## 
-## Attaching package: 'dplyr'</code></pre>
-<pre><code>## The following objects are masked from 'package:stats':
-## 
-##     filter, lag</code></pre>
-<pre><code>## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union</code></pre>
 </div>
 <div id="import-icd9---hcc-crosswalks" class="section level3">
 <h3>Import ICD9 - HCC crosswalks</h3>
@@ -197,8 +189,9 @@ icdhcc$hcc &lt;- str_trim(icdhcc$hcc)</code></pre>
 ## 5  0064   112  2007          9
 ## 6  0074     5  2007          9</code></pre>
 </div>
-<div id="need-to-manually-enter-certain-additional-icd910s" class="section level3">
-<h3>Need to manually enter certain additional ICD9/10s</h3>
+<div id="edit-icd910s" class="section level3">
+<h3>Edit ICD9/10s</h3>
+<p>Per CMS instructions, certain ICD9s have to be manually assigned additional CCs</p>
 <pre class="r"><code># icd9 40403, 40413, and 40493 are assigned to CC 80 in 2007-2012
 extracodes &lt;- list()
 extracodes$e1 &lt;- c(&quot;40403&quot;, &quot;40413&quot;, &quot;40493&quot;)
@@ -246,8 +239,37 @@ labels &lt;- as.data.frame(cbind(hccnum, hccname))
 labels &lt;- labels[!is.na(labels$hccname),]
 rm(hccnum, hccname)</code></pre>
 </div>
-<div id="hierarchy" class="section level3">
-<h3>Hierarchy</h3>
+<div id="define-hierarchy" class="section level3">
+<h3>Define Hierarchy</h3>
+<pre class="r"><code># import raw hierarchy files from CMS
+hierarchy &lt;- apply(data.frame(paste(&quot;crosswalks/importable_xw/hierarchy/&quot;,list.files(&quot;crosswalks/importable_xw/hierarchy/&quot;),sep=&quot;&quot;)), 1, FUN=readLines)
+
+# Create a vector of year names based on the file names in the icd folders
+years &lt;- as.numeric(substr(list.files(&quot;crosswalks/importable_xw/hierarchy/&quot;), 0,4))
+
+# Add year variable to each dataframe
+hierarchy &lt;- mapply(cbind, hierarchy, &quot;year&quot; = years, SIMPLIFY=F)
+
+# convert each item in the list of hierarchy objects into a data.frame and combine into a single DF
+hierarchy &lt;- lapply(hierarchy, as.data.frame, stringsAsFactor=F)
+hierarchy &lt;- rbind_all(hierarchy)
+
+# only keep the lines that are logical hierarchy statements (removes comments, empty lines, additional code) and rename variable
+hierarchy &lt;- hierarchy[grepl(&quot;if hcc|%SET0&quot;, hierarchy$V1),]
+colnames(hierarchy)[1] &lt;- &quot;condition&quot;
+
+# Extract the HCC that is used in the if condition statement
+hierarchy$ifhcc &lt;- str_extract(hierarchy$condition, &quot;(?&lt;=hcc)([0-9]*)|(?&lt;=CC\\=)([0-9]*)&quot;)
+
+# Extract the HCCs that should be set to zero if the above condition is met
+tozero &lt;- str_extract(hierarchy$condition, 
+                 &quot;(?&lt;=i\\=)([:print:]*)(?=;hcc)|(?&lt;=STR\\()([:print:]*)(?= \\)\\);)&quot;)
+
+# convert it to a dataframe and bind it with the original hierarchy data
+tozero &lt;- as.data.frame(str_split_fixed(tozero, &quot;,&quot;, n=8))
+hierarchy &lt;- cbind(hierarchy, tozero)
+
+# now find unique values</code></pre>
 </div>
 <div id="references" class="section level3">
 <h3>References</h3>

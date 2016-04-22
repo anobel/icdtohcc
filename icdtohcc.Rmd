@@ -11,6 +11,10 @@ The ICD/HCC mappings were obtained from [CMS](https://www.cms.gov/Medicare/Healt
 
 Between 2007-2012, there were 70 HCCs (Version 12). In 2013, this was expanded to 87 (Version 20). We use the labels for the more inclusive mappings (post-2013) for all years for consistency. This means that in pre-2013 data 17 HCCs will be structurally zero. 
 ### Packages
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, cache=F)
+```
+
 ```{r}
 library(stringr)
 library(dplyr)
@@ -65,7 +69,8 @@ icdhcc$hcc <- str_trim(icdhcc$hcc)
 head(icdhcc)
 ```
 
-### Need to manually enter certain additional ICD9/10s
+### Edit ICD9/10s
+Per CMS instructions, certain ICD9s have to be manually assigned additional CCs
 ```{r}
 # icd9 40403, 40413, and 40493 are assigned to CC 80 in 2007-2012
 extracodes <- list()
@@ -116,8 +121,37 @@ labels <- labels[!is.na(labels$hccname),]
 rm(hccnum, hccname)
 ```
 
-### Hierarchy
+### Define Hierarchy
 ```{r}
+# import raw hierarchy files from CMS
+hierarchy <- apply(data.frame(paste("crosswalks/importable_xw/hierarchy/",list.files("crosswalks/importable_xw/hierarchy/"),sep="")), 1, FUN=readLines)
+
+# Create a vector of year names based on the file names in the icd folders
+years <- as.numeric(substr(list.files("crosswalks/importable_xw/hierarchy/"), 0,4))
+
+# Add year variable to each dataframe
+hierarchy <- mapply(cbind, hierarchy, "year" = years, SIMPLIFY=F)
+
+# convert each item in the list of hierarchy objects into a data.frame and combine into a single DF
+hierarchy <- lapply(hierarchy, as.data.frame, stringsAsFactor=F)
+hierarchy <- rbind_all(hierarchy)
+
+# only keep the lines that are logical hierarchy statements (removes comments, empty lines, additional code) and rename variable
+hierarchy <- hierarchy[grepl("if hcc|%SET0", hierarchy$V1),]
+colnames(hierarchy)[1] <- "condition"
+
+# Extract the HCC that is used in the if condition statement
+hierarchy$ifhcc <- str_extract(hierarchy$condition, "(?<=hcc)([0-9]*)|(?<=CC\\=)([0-9]*)")
+
+# Extract the HCCs that should be set to zero if the above condition is met
+tozero <- str_extract(hierarchy$condition, 
+                 "(?<=i\\=)([:print:]*)(?=;hcc)|(?<=STR\\()([:print:]*)(?= \\)\\);)")
+
+# convert it to a dataframe and bind it with the original hierarchy data
+tozero <- as.data.frame(str_split_fixed(tozero, ",", n=8))
+hierarchy <- cbind(hierarchy, tozero)
+
+# now find unique values
 
 
 ```

@@ -47,4 +47,3 @@
  /* Injury 8 */    if hcc161 =1 then do i=177;hcc(i)=0;end;
 
   %MEND V12H70H;
-
