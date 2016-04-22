@@ -16,8 +16,10 @@ knitr::opts_chunk$set(warning=FALSE, message=FALSE, cache=F)
 ```
 
 ```{r}
+library(lubridate)
 library(stringr)
 library(dplyr)
+library(tidyr)
 ```
 
 ### Import ICD9 - CC crosswalks
@@ -154,6 +156,7 @@ tozero <- as.data.frame(lapply(tozero, as.numeric))
 
 # combine CC requirements with CCs to zero
 hierarchy <- cbind(hierarchy[,c("year", "ifhcc")], tozero)
+rm(tozero)
 ```
 
 ### Apply CCs
@@ -161,6 +164,28 @@ Will apply this hierarchy to sample (random) patient data in wide format, with u
 ```{r}
 # Import sample data
 pt <- readRDS("data/sampleptdata.rds")
+
+# convert all fields to characters (no factors)
+pt <- data.frame(lapply(pt, as.character), stringsAsFactors = F)
+
+# convert to long format
+pt <- pt %>%
+  gather(diag, icd, -id, -admtdate, na.rm=T) %>%
+  select(-diag)
+
+# Convert date to posix
+pt$admtdate <- parse_date_time(pt$admtdate, orders="Ymd")
+
+# Add year column
+pt$year <- year(pt$admtdate)
+
+# add column for ICD (all data in this example are ICD9)
+pt$icdversion <- 9
+
+# merge CCs to patient data based on ICD/year/version, and drop ICD info
+pt <- pt %>%
+  left_join(icdcc) %>%
+  select(-icd, -icdversion)
 
 
 ```
