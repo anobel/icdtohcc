@@ -134,8 +134,8 @@ $(document).ready(function () {
 <pre class="r"><code>library(stringr)
 library(dplyr)</code></pre>
 </div>
-<div id="import-icd9---hcc-crosswalks" class="section level3">
-<h3>Import ICD9 - HCC crosswalks</h3>
+<div id="import-icd9---cc-crosswalks" class="section level3">
+<h3>Import ICD9 - CC crosswalks</h3>
 <p>These are the files in the crosswalk folders. This naming convention allows use of the year from filenames in organizing the data later.</p>
 <pre class="r"><code># ICD-9
 list.files(&quot;crosswalks/importable_xw/icd9/&quot;)</code></pre>
@@ -147,9 +147,9 @@ list.files(&quot;crosswalks/importable_xw/icd9/&quot;)</code></pre>
 list.files(&quot;crosswalks/importable_xw/icd10/&quot;)</code></pre>
 <pre><code>## [1] &quot;2016_icd10hcc.txt&quot;</code></pre>
 <p>Import the ICD9 and ICD10 HCC crosswalks, one per year, into a list of dataframes</p>
-<pre class="r"><code>icd9hcc &lt;- apply(data.frame(paste(&quot;crosswalks/importable_xw/icd9/&quot;,list.files(&quot;crosswalks/importable_xw/icd9/&quot;),sep=&quot;&quot;)), 1, FUN=read.fwf, width=c(7,4), header=F, stringsAsFactors=F)
+<pre class="r"><code>icd9cc &lt;- apply(data.frame(paste(&quot;crosswalks/importable_xw/icd9/&quot;,list.files(&quot;crosswalks/importable_xw/icd9/&quot;),sep=&quot;&quot;)), 1, FUN=read.fwf, width=c(7,4), header=F, stringsAsFactors=F)
 
-icd10hcc &lt;- apply(data.frame(paste(&quot;crosswalks/importable_xw/icd10/&quot;,list.files(&quot;crosswalks/importable_xw/icd10/&quot;),sep=&quot;&quot;)), 1, FUN=read.fwf, width=c(7,4), header=F, stringsAsFactors=F)
+icd10cc &lt;- apply(data.frame(paste(&quot;crosswalks/importable_xw/icd10/&quot;,list.files(&quot;crosswalks/importable_xw/icd10/&quot;),sep=&quot;&quot;)), 1, FUN=read.fwf, width=c(7,4), header=F, stringsAsFactors=F)
 
 # Create a vector of year names based on the file names in the icd folders
 years &lt;- list()
@@ -157,30 +157,30 @@ years$icd9 &lt;- as.numeric(substr(list.files(&quot;crosswalks/importable_xw/icd
 years$icd10 &lt;- as.numeric(substr(list.files(&quot;crosswalks/importable_xw/icd10/&quot;), 0,4))
 
 # assign year to each dataframe within the list of dataframes
-icd9hcc &lt;- mapply(cbind, icd9hcc, &quot;year&quot; = years$icd9, SIMPLIFY=F)
-icd10hcc &lt;- mapply(cbind, icd10hcc, &quot;year&quot; = years$icd10, SIMPLIFY=F)
+icd9cc &lt;- mapply(cbind, icd9cc, &quot;year&quot; = years$icd9, SIMPLIFY=F)
+icd10cc &lt;- mapply(cbind, icd10cc, &quot;year&quot; = years$icd10, SIMPLIFY=F)
 
 # Row bind icd9 and icd10 from different years into despective dataframes
-icd9hcc &lt;- rbind_all(icd9hcc)
-icd10hcc &lt;- rbind_all(icd10hcc)
+icd9cc &lt;- rbind_all(icd9cc)
+icd10cc &lt;- rbind_all(icd10cc)
 
 # Assign ICD version (9 or 10) and combine into single dataframe
-icd9hcc$icdversion &lt;- 9
-icd10hcc$icdversion &lt;- 10
-icdhcc &lt;- rbind(icd9hcc, icd10hcc)
+icd9cc$icdversion &lt;- 9
+icd10cc$icdversion &lt;- 10
+icdcc &lt;- rbind(icd9cc, icd10cc)
 
-rm(icd9hcc, icd10hcc, years)
+rm(icd9cc, icd10cc, years)
 
 # add variable names
-colnames(icdhcc) &lt;- c(&quot;icd&quot;, &quot;hcc&quot;, &quot;year&quot;, &quot;icdversion&quot;)
+colnames(icdcc) &lt;- c(&quot;icd&quot;, &quot;cc&quot;, &quot;year&quot;, &quot;icdversion&quot;)
 
 # Remove whitespace from codes
-icdhcc$icd &lt;- str_trim(icdhcc$icd)
-icdhcc$hcc &lt;- str_trim(icdhcc$hcc)</code></pre>
-<pre class="r"><code>head(icdhcc)</code></pre>
+icdcc$icd &lt;- str_trim(icdcc$icd)
+icdcc$cc &lt;- str_trim(icdcc$cc)</code></pre>
+<pre class="r"><code>head(icdcc)</code></pre>
 <pre><code>## Source: local data frame [6 x 4]
 ## 
-##     icd   hcc  year icdversion
+##     icd    cc  year icdversion
 ##   (chr) (chr) (dbl)      (dbl)
 ## 1  0031     2  2007          9
 ## 2 00322   112  2007          9
@@ -217,10 +217,10 @@ extracodes$e5 &lt;- expand.grid(extracodes$e5, &quot;18&quot;, 2014:2015, 9, str
 extracodes &lt;- rbind_all(extracodes)
 
 # add variable names
-colnames(extracodes) &lt;- c(&quot;icd&quot;, &quot;hcc&quot;, &quot;year&quot;, &quot;icdversion&quot;)
+colnames(extracodes) &lt;- c(&quot;icd&quot;, &quot;cc&quot;, &quot;year&quot;, &quot;icdversion&quot;)
 
-# combine with full icdhcc listing
-icdhcc &lt;- rbind(icdhcc, extracodes)
+# combine with full icdcc listing
+icdcc &lt;- rbind(icdcc, extracodes)
 rm(extracodes)</code></pre>
 </div>
 <div id="import-labels" class="section level3">
@@ -266,10 +266,18 @@ tozero &lt;- str_extract(hierarchy$condition,
                  &quot;(?&lt;=i\\=)([:print:]*)(?=;hcc)|(?&lt;=STR\\()([:print:]*)(?= \\)\\);)&quot;)
 
 # convert it to a dataframe and bind it with the original hierarchy data
-tozero &lt;- as.data.frame(str_split_fixed(tozero, &quot;,&quot;, n=8))
-hierarchy &lt;- cbind(hierarchy, tozero)
+tozero &lt;- as.data.frame(str_split_fixed(tozero, &quot;,&quot;, n=8), stringsAsFactors = F)
+# convert to numeric
+tozero &lt;- as.data.frame(lapply(tozero, as.numeric))
 
-# now find unique values</code></pre>
+# combine CC requirements with CCs to zero
+hierarchy &lt;- cbind(hierarchy[,c(&quot;year&quot;, &quot;ifhcc&quot;)], tozero)</code></pre>
+</div>
+<div id="apply-ccs" class="section level3">
+<h3>Apply CCs</h3>
+<p>Will apply this hierarchy to sample (random) patient data in wide format, with up to 25 diagnoses per patient</p>
+<pre class="r"><code># Import sample data
+pt &lt;- readRDS(&quot;data/sampleptdata.rds&quot;)</code></pre>
 </div>
 <div id="references" class="section level3">
 <h3>References</h3>
