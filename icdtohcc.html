@@ -131,8 +131,10 @@ $(document).ready(function () {
 <h3>Data</h3>
 <p>The ICD/HCC mappings were obtained from <a href="https://www.cms.gov/Medicare/Health-Plans/MedicareAdvtgSpecRateStats/Risk-Adjustors.html">CMS</a>. CMS provides SAS macros for assigning HCCs and HCC scores based on ICDs, adjusted annually. We have implemented assigning HCCs (but not scores) in R. The original data is available from CMS, or in the github repository at /crosswalks/originalCMS_xw.</p>
 <p>Between 2007-2012, there were 70 HCCs (Version 12). In 2013, this was expanded to 87 (Version 20). We use the labels for the more inclusive mappings (post-2013) for all years for consistency. This means that in pre-2013 data 17 HCCs will be structurally zero. ### Packages</p>
-<pre class="r"><code>library(stringr)
-library(dplyr)</code></pre>
+<pre class="r"><code>library(lubridate)
+library(stringr)
+library(dplyr)
+library(tidyr)</code></pre>
 </div>
 <div id="import-icd9---cc-crosswalks" class="section level3">
 <h3>Import ICD9 - CC crosswalks</h3>
@@ -271,13 +273,36 @@ tozero &lt;- as.data.frame(str_split_fixed(tozero, &quot;,&quot;, n=8), stringsA
 tozero &lt;- as.data.frame(lapply(tozero, as.numeric))
 
 # combine CC requirements with CCs to zero
-hierarchy &lt;- cbind(hierarchy[,c(&quot;year&quot;, &quot;ifhcc&quot;)], tozero)</code></pre>
+hierarchy &lt;- cbind(hierarchy[,c(&quot;year&quot;, &quot;ifhcc&quot;)], tozero)
+rm(tozero)</code></pre>
 </div>
 <div id="apply-ccs" class="section level3">
 <h3>Apply CCs</h3>
 <p>Will apply this hierarchy to sample (random) patient data in wide format, with up to 25 diagnoses per patient</p>
 <pre class="r"><code># Import sample data
-pt &lt;- readRDS(&quot;data/sampleptdata.rds&quot;)</code></pre>
+pt &lt;- readRDS(&quot;data/sampleptdata.rds&quot;)
+
+# convert all fields to characters (no factors)
+pt &lt;- data.frame(lapply(pt, as.character), stringsAsFactors = F)
+
+# convert to long format
+pt &lt;- pt %&gt;%
+  gather(diag, icd, -id, -admtdate, na.rm=T) %&gt;%
+  select(-diag)
+
+# Convert date to posix
+pt$admtdate &lt;- parse_date_time(pt$admtdate, orders=&quot;Ymd&quot;)
+
+# Add year column
+pt$year &lt;- year(pt$admtdate)
+
+# add column for ICD (all data in this example are ICD9)
+pt$icdversion &lt;- 9
+
+# merge CCs to patient data based on ICD/year/version, and drop ICD info
+pt &lt;- pt %&gt;%
+  left_join(icdcc) %&gt;%
+  select(-icd, -icdversion)</code></pre>
 </div>
 <div id="references" class="section level3">
 <h3>References</h3>

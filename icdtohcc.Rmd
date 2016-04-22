@@ -186,9 +186,9 @@ pt$icdversion <- 9
 pt <- pt %>%
   left_join(icdcc) %>%
   select(-icd, -icdversion)
-
-
 ```
+
+
 ### References
 - https://www.cms.gov/Medicare/Health-Plans/MedicareAdvtgSpecRateStats/Risk-Adjustors.html
 - https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Reports/downloads/pope_2000_2.pdf
