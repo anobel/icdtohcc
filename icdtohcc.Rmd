@@ -170,8 +170,7 @@ pt <- data.frame(lapply(pt, as.character), stringsAsFactors = F)
 
 # convert to long format
 pt <- pt %>%
-  gather(diag, icd, -id, -admtdate, na.rm=T) %>%
-  select(-diag)
+  gather(diag, icd, -id, -admtdate, na.rm=T)
 
 # Convert date to posix
 pt$admtdate <- parse_date_time(pt$admtdate, orders="Ymd")
@@ -185,7 +184,13 @@ pt$icdversion <- 9
 # merge CCs to patient data based on ICD/year/version, and drop ICD info
 pt <- pt %>%
   left_join(icdcc) %>%
-  select(-icd, -icdversion)
+  select(-icd, -icdversion, -year)
+
+# convert back to wide format  
+pt <- pt %>%
+  mutate(rn = 1:nrow(pt)) %>%  # Add index to make sure no errors on duplicates
+  spread(diag, cc) %>%
+  select(-rn) # remove index
 ```
 
 

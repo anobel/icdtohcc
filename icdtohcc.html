@@ -287,8 +287,7 @@ pt &lt;- data.frame(lapply(pt, as.character), stringsAsFactors = F)
 
 # convert to long format
 pt &lt;- pt %&gt;%
-  gather(diag, icd, -id, -admtdate, na.rm=T) %&gt;%
-  select(-diag)
+  gather(diag, icd, -id, -admtdate, na.rm=T)
 
 # Convert date to posix
 pt$admtdate &lt;- parse_date_time(pt$admtdate, orders=&quot;Ymd&quot;)
@@ -302,7 +301,13 @@ pt$icdversion &lt;- 9
 # merge CCs to patient data based on ICD/year/version, and drop ICD info
 pt &lt;- pt %&gt;%
   left_join(icdcc) %&gt;%
-  select(-icd, -icdversion)</code></pre>
+  select(-icd, -icdversion, -year)
+
+# convert back to wide format  
+pt &lt;- pt %&gt;%
+  mutate(rn = 1:nrow(pt)) %&gt;%  # Add index to make sure no errors on duplicates
+  spread(diag, cc) %&gt;%
+  select(-rn) # remove index</code></pre>
 </div>
 <div id="references" class="section level3">
 <h3>References</h3>
