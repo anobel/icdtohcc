@@ -247,7 +247,7 @@ rm(hccnum, hccname)</code></pre>
 hierarchy &lt;- apply(data.frame(paste(&quot;crosswalks/importable_xw/hierarchy/&quot;,list.files(&quot;crosswalks/importable_xw/hierarchy/&quot;),sep=&quot;&quot;)), 1, FUN=readLines)
 
 # Create a vector of year names based on the file names in the icd folders
-years &lt;- as.numeric(substr(list.files(&quot;crosswalks/importable_xw/hierarchy/&quot;), 0,4))
+years &lt;- substr(list.files(&quot;crosswalks/importable_xw/hierarchy/&quot;), 0,4)
 
 # Add year variable to each dataframe
 hierarchy &lt;- mapply(cbind, hierarchy, &quot;year&quot; = years, SIMPLIFY=F)
@@ -256,24 +256,33 @@ hierarchy &lt;- mapply(cbind, hierarchy, &quot;year&quot; = years, SIMPLIFY=F)
 hierarchy &lt;- lapply(hierarchy, as.data.frame, stringsAsFactor=F)
 hierarchy &lt;- rbind_all(hierarchy)
 
+# convert years to numeric
+hierarchy$year &lt;- as.numeric(hierarchy$year)
+
 # only keep the lines that are logical hierarchy statements (removes comments, empty lines, additional code) and rename variable
 hierarchy &lt;- hierarchy[grepl(&quot;if hcc|%SET0&quot;, hierarchy$V1),]
 colnames(hierarchy)[1] &lt;- &quot;condition&quot;
 
 # Extract the HCC that is used in the if condition statement
-hierarchy$ifhcc &lt;- str_extract(hierarchy$condition, &quot;(?&lt;=hcc)([0-9]*)|(?&lt;=CC\\=)([0-9]*)&quot;)
+hierarchy$ifcc &lt;- as.numeric(str_extract(hierarchy$condition, &quot;(?&lt;=hcc)([0-9]*)|(?&lt;=CC\\=)([0-9]*)&quot;))
 
 # Extract the HCCs that should be set to zero if the above condition is met
 tozero &lt;- str_extract(hierarchy$condition, 
                  &quot;(?&lt;=i\\=)([:print:]*)(?=;hcc)|(?&lt;=STR\\()([:print:]*)(?= \\)\\);)&quot;)
 
 # convert it to a dataframe and bind it with the original hierarchy data
-tozero &lt;- as.data.frame(str_split_fixed(tozero, &quot;,&quot;, n=8), stringsAsFactors = F)
+tozero &lt;- as.data.frame(str_split_fixed(tozero, &quot;,&quot;, n=10), stringsAsFactors = F)
 # convert to numeric
 tozero &lt;- as.data.frame(lapply(tozero, as.numeric))
 
 # combine CC requirements with CCs to zero
-hierarchy &lt;- cbind(hierarchy[,c(&quot;year&quot;, &quot;ifhcc&quot;)], tozero)
+hierarchy &lt;- cbind(hierarchy[,c(&quot;year&quot;, &quot;ifcc&quot;)], tozero)
+
+# remove columns that are completely NA
+# intially, set up hiearchy to allow for up to 10 possible conditions, now will remove extra columns
+# In current data, maximum is 6 conditions to zero, however leaving room in case these are expanded in the future
+hierarchy &lt;- hierarchy[,colSums(is.na(hierarchy))&lt;nrow(hierarchy)]
+
 rm(tozero)</code></pre>
 </div>
 <div id="apply-ccs" class="section level3">
@@ -301,13 +310,15 @@ pt$icdversion &lt;- 9
 # merge CCs to patient data based on ICD/year/version, and drop ICD info
 pt &lt;- pt %&gt;%
   left_join(icdcc) %&gt;%
-  select(-icd, -icdversion, -year)
-
-# convert back to wide format  
-pt &lt;- pt %&gt;%
-  mutate(rn = 1:nrow(pt)) %&gt;%  # Add index to make sure no errors on duplicates
-  spread(diag, cc) %&gt;%
-  select(-rn) # remove index</code></pre>
+  select(-icd, -icdversion, -year) %&gt;%
+  filter(!is.na(cc)) %&gt;%
+  distinct(id, admtdate, cc) %&gt;%
+  mutate(cc = as.numeric(cc)) %&gt;%
+  group_by(id, admtdate) %&gt;%
+  arrange(cc)</code></pre>
+</div>
+<div id="apply-hierarchies" class="section level3">
+<h3>Apply Hierarchies</h3>
 </div>
 <div id="references" class="section level3">
 <h3>References</h3>

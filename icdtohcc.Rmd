@@ -129,7 +129,7 @@ rm(hccnum, hccname)
 hierarchy <- apply(data.frame(paste("crosswalks/importable_xw/hierarchy/",list.files("crosswalks/importable_xw/hierarchy/"),sep="")), 1, FUN=readLines)
 
 # Create a vector of year names based on the file names in the icd folders
-years <- as.numeric(substr(list.files("crosswalks/importable_xw/hierarchy/"), 0,4))
+years <- substr(list.files("crosswalks/importable_xw/hierarchy/"), 0,4)
 
 # Add year variable to each dataframe
 hierarchy <- mapply(cbind, hierarchy, "year" = years, SIMPLIFY=F)
@@ -138,24 +138,33 @@ hierarchy <- mapply(cbind, hierarchy, "year" = years, SIMPLIFY=F)
 hierarchy <- lapply(hierarchy, as.data.frame, stringsAsFactor=F)
 hierarchy <- rbind_all(hierarchy)
 
+# convert years to numeric
+hierarchy$year <- as.numeric(hierarchy$year)
+
 # only keep the lines that are logical hierarchy statements (removes comments, empty lines, additional code) and rename variable
 hierarchy <- hierarchy[grepl("if hcc|%SET0", hierarchy$V1),]
 colnames(hierarchy)[1] <- "condition"
 
 # Extract the HCC that is used in the if condition statement
-hierarchy$ifhcc <- str_extract(hierarchy$condition, "(?<=hcc)([0-9]*)|(?<=CC\\=)([0-9]*)")
+hierarchy$ifcc <- as.numeric(str_extract(hierarchy$condition, "(?<=hcc)([0-9]*)|(?<=CC\\=)([0-9]*)"))
 
 # Extract the HCCs that should be set to zero if the above condition is met
 tozero <- str_extract(hierarchy$condition, 
                  "(?<=i\\=)([:print:]*)(?=;hcc)|(?<=STR\\()([:print:]*)(?= \\)\\);)")
 
 # convert it to a dataframe and bind it with the original hierarchy data
-tozero <- as.data.frame(str_split_fixed(tozero, ",", n=8), stringsAsFactors = F)
+tozero <- as.data.frame(str_split_fixed(tozero, ",", n=10), stringsAsFactors = F)
 # convert to numeric
 tozero <- as.data.frame(lapply(tozero, as.numeric))
 
 # combine CC requirements with CCs to zero
-hierarchy <- cbind(hierarchy[,c("year", "ifhcc")], tozero)
+hierarchy <- cbind(hierarchy[,c("year", "ifcc")], tozero)
+
+# remove columns that are completely NA
+# intially, set up hiearchy to allow for up to 10 possible conditions, now will remove extra columns
+# In current data, maximum is 6 conditions to zero, however leaving room in case these are expanded in the future
+hierarchy <- hierarchy[,colSums(is.na(hierarchy))<nrow(hierarchy)]
+
 rm(tozero)
 ```
 
@@ -184,15 +193,20 @@ pt$icdversion <- 9
 # merge CCs to patient data based on ICD/year/version, and drop ICD info
 pt <- pt %>%
   left_join(icdcc) %>%
-  select(-icd, -icdversion, -year)
-
-# convert back to wide format  
-pt <- pt %>%
-  mutate(rn = 1:nrow(pt)) %>%  # Add index to make sure no errors on duplicates
-  spread(diag, cc) %>%
-  select(-rn) # remove index
+  select(-icd, -icdversion, -year) %>%
+  filter(!is.na(cc)) %>%
+  distinct(id, admtdate, cc) %>%
+  mutate(cc = as.numeric(cc)) %>%
+  group_by(id, admtdate) %>%
+  arrange(cc)
 ```
 
+### Apply Hierarchies
+```{r}
+
+
+
+```
 
 ### References
 - https://www.cms.gov/Medicare/Health-Plans/MedicareAdvtgSpecRateStats/Risk-Adjustors.html
