@@ -227,19 +227,35 @@ rm(extracodes)</code></pre>
 </div>
 <div id="import-labels" class="section level3">
 <h3>Import Labels</h3>
-<pre class="r"><code># Import most inclusive HCC labels (2013)
-labels &lt;- readLines(&quot;crosswalks/importable_xw/labels/V20H87L1.TXT&quot;)
+<pre class="r"><code># Import HCC labels from all years
+labels &lt;- apply(data.frame(paste(&quot;crosswalks/importable_xw/labels/&quot;,list.files(&quot;crosswalks/importable_xw/labels/&quot;),sep=&quot;&quot;)), 1, FUN=readLines)
 
-# Extract HCC numbers
-hccnum &lt;- str_match(labels, &quot;HCC([:digit:]*)&quot;)[,2]
+# Convert a single dataframe
+labels &lt;- lapply(labels, as.data.frame, stringsAsFactors=F)
+labels &lt;- do.call(rbind, labels)
+
+# Extract HCC numbers (this picks up a few extra numbers, 1,2 which are dupes anyway)
+hccnum &lt;- gsub(&quot;([^0-9])&quot;, &quot;&quot;, labels[,1])
 
 # Extract HCC names
-hccname &lt;- str_match(labels, &quot;(\&quot;)([:print:]*)(\&quot;)&quot;)[,3]
+hccname &lt;- substr(labels[,1], regexpr(&quot;=&quot;, labels[,1])+2, nchar(labels[,1])-1)
 
 # Combine numbers and names into dataframe of labels
-labels &lt;- as.data.frame(cbind(hccnum, hccname))
-labels &lt;- labels[!is.na(labels$hccname),]
-rm(hccnum, hccname)</code></pre>
+labels &lt;- data.frame(hccnum, hccname, stringsAsFactors = F, row.names = NULL)
+rm(hccnum, hccname)
+
+# Drop lines with NA/out of range HCC numbers
+labels$hccnum &lt;- as.numeric(labels$hccnum)
+labels &lt;- labels[!is.na(labels$hccnum) &amp; labels$hccnum &lt; 300, ]
+
+# Drop duplicated HCC numbers
+labels &lt;- labels[!duplicated(labels$hccnum),]
+
+# Remove whitespace from hccnames
+labels$hccname &lt;- trimws(labels$hccname)
+
+# Order in ascending order of HCC number
+labels &lt;- labels[order(labels$hccnum),]</code></pre>
 </div>
 <div id="define-hierarchy" class="section level3">
 <h3>Define Hierarchy</h3>
@@ -253,7 +269,7 @@ years &lt;- substr(list.files(&quot;crosswalks/importable_xw/hierarchy/&quot;), 
 hierarchy &lt;- mapply(cbind, hierarchy, &quot;year&quot; = years, SIMPLIFY=F)
 
 # convert each item in the list of hierarchy objects into a data.frame and combine into a single DF
-hierarchy &lt;- lapply(hierarchy, as.data.frame, stringsAsFactor=F)
+hierarchy &lt;- lapply(hierarchy, as.data.frame, stringsAsFactors=F)
 hierarchy &lt;- rbind_all(hierarchy)
 
 # convert years to numeric

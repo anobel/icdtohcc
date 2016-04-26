@@ -108,19 +108,35 @@ rm(extracodes)
 
 ### Import Labels
 ```{r}
-# Import most inclusive HCC labels (2013)
-labels <- readLines("crosswalks/importable_xw/labels/V20H87L1.TXT")
+# Import HCC labels from all years
+labels <- apply(data.frame(paste("crosswalks/importable_xw/labels/",list.files("crosswalks/importable_xw/labels/"),sep="")), 1, FUN=readLines)
 
-# Extract HCC numbers
-hccnum <- str_match(labels, "HCC([:digit:]*)")[,2]
+# Convert a single dataframe
+labels <- lapply(labels, as.data.frame, stringsAsFactors=F)
+labels <- do.call(rbind, labels)
+
+# Extract HCC numbers (this picks up a few extra numbers, 1,2 which are dupes anyway)
+hccnum <- gsub("([^0-9])", "", labels[,1])
 
 # Extract HCC names
-hccname <- str_match(labels, "(\")([:print:]*)(\")")[,3]
+hccname <- substr(labels[,1], regexpr("=", labels[,1])+2, nchar(labels[,1])-1)
 
 # Combine numbers and names into dataframe of labels
-labels <- as.data.frame(cbind(hccnum, hccname))
-labels <- labels[!is.na(labels$hccname),]
+labels <- data.frame(hccnum, hccname, stringsAsFactors = F, row.names = NULL)
 rm(hccnum, hccname)
+
+# Drop lines with NA/out of range HCC numbers
+labels$hccnum <- as.numeric(labels$hccnum)
+labels <- labels[!is.na(labels$hccnum) & labels$hccnum < 300, ]
+
+# Drop duplicated HCC numbers
+labels <- labels[!duplicated(labels$hccnum),]
+
+# Remove whitespace from hccnames
+labels$hccname <- trimws(labels$hccname)
+
+# Order in ascending order of HCC number
+labels <- labels[order(labels$hccnum),]
 ```
 
 ### Define Hierarchy
@@ -135,7 +151,7 @@ years <- substr(list.files("crosswalks/importable_xw/hierarchy/"), 0,4)
 hierarchy <- mapply(cbind, hierarchy, "year" = years, SIMPLIFY=F)
 
 # convert each item in the list of hierarchy objects into a data.frame and combine into a single DF
-hierarchy <- lapply(hierarchy, as.data.frame, stringsAsFactor=F)
+hierarchy <- lapply(hierarchy, as.data.frame, stringsAsFactors=F)
 hierarchy <- rbind_all(hierarchy)
 
 # convert years to numeric
@@ -203,8 +219,6 @@ pt <- pt %>%
 
 ### Apply Hierarchies
 ```{r}
-
-
 
 ```
 
