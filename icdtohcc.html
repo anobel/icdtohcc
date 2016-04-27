@@ -131,10 +131,7 @@ $(document).ready(function () {
 <h3>Data</h3>
 <p>The ICD/HCC mappings were obtained from <a href="https://www.cms.gov/Medicare/Health-Plans/MedicareAdvtgSpecRateStats/Risk-Adjustors.html">CMS</a>. CMS provides SAS macros for assigning HCCs and HCC scores based on ICDs, adjusted annually. We have implemented assigning HCCs (but not scores) in R. The original data is available from CMS, or in the github repository at /crosswalks/originalCMS_xw.</p>
 <p>Between 2007-2012, there were 70 HCCs (Version 12). In 2013, this was expanded to 87 (Version 20). We use the labels for the more inclusive mappings (post-2013) for all years for consistency. This means that in pre-2013 data 17 HCCs will be structurally zero. ### Packages</p>
-<pre class="r"><code>library(lubridate)
-library(stringr)
-library(dplyr)
-library(tidyr)</code></pre>
+<pre class="r"><code>library(stringr)</code></pre>
 </div>
 <div id="import-icd9---cc-crosswalks" class="section level3">
 <h3>Import ICD9 - CC crosswalks</h3>
@@ -163,8 +160,8 @@ icd9cc &lt;- mapply(cbind, icd9cc, &quot;year&quot; = years$icd9, SIMPLIFY=F)
 icd10cc &lt;- mapply(cbind, icd10cc, &quot;year&quot; = years$icd10, SIMPLIFY=F)
 
 # Row bind icd9 and icd10 from different years into despective dataframes
-icd9cc &lt;- rbind_all(icd9cc)
-icd10cc &lt;- rbind_all(icd10cc)
+icd9cc &lt;- do.call(rbind, icd9cc)
+icd10cc &lt;- do.call(rbind, icd10cc)
 
 # Assign ICD version (9 or 10) and combine into single dataframe
 icd9cc$icdversion &lt;- 9
@@ -177,19 +174,16 @@ rm(icd9cc, icd10cc, years)
 colnames(icdcc) &lt;- c(&quot;icd&quot;, &quot;cc&quot;, &quot;year&quot;, &quot;icdversion&quot;)
 
 # Remove whitespace from codes
-icdcc$icd &lt;- str_trim(icdcc$icd)
-icdcc$cc &lt;- str_trim(icdcc$cc)</code></pre>
+icdcc$icd &lt;- trimws(icdcc$icd)
+icdcc$cc &lt;- trimws(icdcc$cc)</code></pre>
 <pre class="r"><code>head(icdcc)</code></pre>
-<pre><code>## Source: local data frame [6 x 4]
-## 
-##     icd    cc  year icdversion
-##   (chr) (chr) (dbl)      (dbl)
-## 1  0031     2  2007          9
-## 2 00322   112  2007          9
-## 3 00323    37  2007          9
-## 4 00324    37  2007          9
-## 5  0064   112  2007          9
-## 6  0074     5  2007          9</code></pre>
+<pre><code>##     icd  cc year icdversion
+## 1  0031   2 2007          9
+## 2 00322 112 2007          9
+## 3 00323  37 2007          9
+## 4 00324  37 2007          9
+## 5  0064 112 2007          9
+## 6  0074   5 2007          9</code></pre>
 </div>
 <div id="edit-icd910s" class="section level3">
 <h3>Edit ICD9/10s</h3>
@@ -216,7 +210,7 @@ extracodes$e5 &lt;- &quot;36202&quot;
 extracodes$e5 &lt;- expand.grid(extracodes$e5, &quot;18&quot;, 2014:2015, 9, stringsAsFactors = F)
 
 # combine into one DF
-extracodes &lt;- rbind_all(extracodes)
+extracodes &lt;- do.call(rbind, extracodes)
 
 # add variable names
 colnames(extracodes) &lt;- c(&quot;icd&quot;, &quot;cc&quot;, &quot;year&quot;, &quot;icdversion&quot;)
@@ -234,8 +228,8 @@ labels &lt;- apply(data.frame(paste(&quot;crosswalks/importable_xw/labels/&quot;
 labels &lt;- lapply(labels, as.data.frame, stringsAsFactors=F)
 labels &lt;- do.call(rbind, labels)
 
-# Extract HCC numbers (this picks up a few extra numbers, 1,2 which are dupes anyway)
-hccnum &lt;- gsub(&quot;([^0-9])&quot;, &quot;&quot;, labels[,1])
+# Extract HCC numbers
+hccnum &lt;- str_match(labels[,1], &quot;HCC([:digit:]*)&quot;)[,2]
 
 # Extract HCC names
 hccname &lt;- substr(labels[,1], regexpr(&quot;=&quot;, labels[,1])+2, nchar(labels[,1])-1)
@@ -246,7 +240,7 @@ rm(hccnum, hccname)
 
 # Drop lines with NA/out of range HCC numbers
 labels$hccnum &lt;- as.numeric(labels$hccnum)
-labels &lt;- labels[!is.na(labels$hccnum) &amp; labels$hccnum &lt; 300, ]
+labels &lt;- labels[!is.na(labels$hccnum),]
 
 # Drop duplicated HCC numbers
 labels &lt;- labels[!duplicated(labels$hccnum),]
@@ -270,7 +264,7 @@ hierarchy &lt;- mapply(cbind, hierarchy, &quot;year&quot; = years, SIMPLIFY=F)
 
 # convert each item in the list of hierarchy objects into a data.frame and combine into a single DF
 hierarchy &lt;- lapply(hierarchy, as.data.frame, stringsAsFactors=F)
-hierarchy &lt;- rbind_all(hierarchy)
+hierarchy &lt;- do.call(rbind, hierarchy)
 
 # convert years to numeric
 hierarchy$year &lt;- as.numeric(hierarchy$year)
@@ -311,30 +305,85 @@ pt &lt;- readRDS(&quot;data/sampleptdata.rds&quot;)
 pt &lt;- data.frame(lapply(pt, as.character), stringsAsFactors = F)
 
 # convert to long format
-pt &lt;- pt %&gt;%
-  gather(diag, icd, -id, -admtdate, na.rm=T)
+diags &lt;- c(&quot;diag_p&quot;, paste(&quot;odiag&quot;,1:24,sep=&quot;&quot;))
 
-# Convert date to posix
-pt$admtdate &lt;- parse_date_time(pt$admtdate, orders=&quot;Ymd&quot;)
+# reshape into long using base functions
+# can be done faster using tidyr, but want to minimize dependencies
+# pt &lt;- pt %&gt;%
+#   gather(diag, icd, -id, -admtdate, na.rm=T)
 
-# Add year column
-pt$year &lt;- year(pt$admtdate)
+pt &lt;- reshape(pt,
+             varying=diags,
+             v.names=&quot;icd&quot;,
+             timevar=&quot;diag_num&quot;,
+             times=diags,
+             new.row.names = NULL,
+             direction=&quot;long&quot;)
+
+rm(diags)
+
+# drop NA icds generated by reshaping
+pt &lt;- pt[!is.na(pt$icd),]
+
+# Convert date and add column for year
+pt$admtdate &lt;- as.Date(pt$admtdate)
+pt$year &lt;- as.numeric(format(pt$admtdate, '%Y'))
 
 # add column for ICD (all data in this example are ICD9)
 pt$icdversion &lt;- 9
 
 # merge CCs to patient data based on ICD/year/version, and drop ICD info
-pt &lt;- pt %&gt;%
-  left_join(icdcc) %&gt;%
-  select(-icd, -icdversion, -year) %&gt;%
-  filter(!is.na(cc)) %&gt;%
-  distinct(id, admtdate, cc) %&gt;%
-  mutate(cc = as.numeric(cc)) %&gt;%
-  group_by(id, admtdate) %&gt;%
-  arrange(cc)</code></pre>
+pt &lt;- merge(pt, icdcc, all.x=T)
+# rm(icdcc)
+
+# Convert CC to numeric and drop those with missing CC (not all ICDs resolve to a CC by definition)
+pt &lt;- pt[!is.na(pt$cc),]
+pt$cc &lt;- as.numeric(pt$cc)
+
+
+# keep id, admtdate, and cc columns only
+pt &lt;- pt[,c(&quot;id&quot;, &quot;admtdate&quot;, &quot;year&quot;, &quot;cc&quot;)]
+
+# Keep only unique records (multiple ICDs for a patient can resolve to same CC)
+pt &lt;- unique(pt)</code></pre>
 </div>
 <div id="apply-hierarchies" class="section level3">
 <h3>Apply Hierarchies</h3>
+<pre class="r"><code># Duplicate ifcc column into CC column to merge with pt data, keep dup column
+hierarchy$cc &lt;- hierarchy$ifcc
+
+# Merge hierarchy rules with patient data
+pt &lt;- merge(pt, hierarchy, all.x = TRUE)
+
+###########
+# create empty list
+todrop &lt;- list()
+
+# create a list of dataframes that contain the CCs that will be zero'd out
+for (i in 1:6) {
+  todrop[[i]] &lt;- pt[!is.na(pt$ifcc),c(3,4,5+i)]
+}
+
+# rename all dfs in list to same column names, rbind into one df
+todrop &lt;- lapply(1:length(todrop), function(x) {
+  names(todrop[[x]]) &lt;- c(&quot;id&quot;, &quot;admtdate&quot;, &quot;cc&quot;)
+  return(todrop[[x]])
+  }
+)
+todrop &lt;- do.call(rbind, todrop)
+
+# remove all NAs from CC field
+todrop &lt;- todrop[!is.na(todrop$cc),]
+
+# set flag, all of these CCs will be dropped
+todrop$todrop &lt;- T
+
+# merge drop flags with pt data
+pt &lt;- merge(pt, todrop, all.x=T)
+
+# drop flagged patients and keep columns of interest
+pt &lt;- pt[is.na(pt$todrop), ]
+pt &lt;- pt[,c(&quot;id&quot;, &quot;admtdate&quot;, &quot;cc&quot;)]</code></pre>
 </div>
 <div id="references" class="section level3">
 <h3>References</h3>
