@@ -12,4 +12,11 @@ The ICD/HCC mappings were obtained from [CMS](https://www.cms.gov/Medicare/Healt
 Between 2007-2012, there were 70 HCCs (Version 12). In 2013, this was expanded to 87 (Version 20). We use the labels for the more inclusive mappings (post-2013) for all years for consistency. This means that in pre-2013 data 17 HCCs will be structurally zero. 
 
 ### Source
-[See here](http://htmlpreview.github.io/?https://github.com/anobel/icdtohcc/blob/master/icdtohcc.html)
+**icdtohcc.R**
+- Import condition categories, hierarchy rules, and labels, by year from CMS (for both ICD9/10)
+- Apply CCs and implement hierarchies to generate HCCs, starts with wide patient data, ends with long data
+[Source with markdown](http://htmlpreview.github.io/?https://github.com/anobel/icdtohcc/blob/master/icdtohcc.html)
+
+### Future Plans
+- split into separate functions
+- ?incorporate into [icd package](http://github.com/jackwasey/icd/issues/31)

@@ -124,7 +124,7 @@ $(document).ready(function () {
 <h3>Introduction</h3>
 <ul>
 <li>many to many relationship</li>
-<li>ICD9/10 are mapped to Condition Categories (CC), and a hierarchy based on disease severity is applied to the CCs to generate HCCs. For example, if a patient has ICDs (and subsequently CC) for diabetes without complications and diabetes with complications, they are only assigned to the most severe HCC, which in this case would be diabetes with complications.</li>
+<li>ICD9/10 are mapped to Condition Categories (CC), and a hierarchy based on disease severity is applied to the CCs to generate HCCs.</li>
 </ul>
 </div>
 <div id="data" class="section level3">
@@ -134,7 +134,14 @@ $(document).ready(function () {
 </div>
 <div id="source" class="section level3">
 <h3>Source</h3>
-<p><a href="https://github.com/anobel/icdtohcc/blob/master/icdtohcc.html">See here</a></p>
+<p><strong>icdtohcc.R</strong> - Import condition categories, hierarchy rules, and labels, by year from CMS (for both ICD9/10) - Apply CCs and implement hierarchies to generate HCCs, starts with wide patient data, ends with long data <a href="http://htmlpreview.github.io/?https://github.com/anobel/icdtohcc/blob/master/icdtohcc.html">Source with markdown</a></p>
+</div>
+<div id="future-plans" class="section level3">
+<h3>Future Plans</h3>
+<ul>
+<li>split into separate functions</li>
+<li>?incorporate into <a href="http://github.com/jackwasey/icd/issues/31">icd package</a></li>
+</ul>
 </div>
 </div>
 
