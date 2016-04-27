@@ -14,24 +14,24 @@
 ### Packages
 library(stringr)
 library(icd)
-
+library(lintr)
 
 #############################################
 ######### Import ICD9 - CC crosswalks
 #############################################
 
 # Import the ICD9 and ICD10 HCC crosswalks, one per year, into a list of dataframes
-icd9cc <- apply(data.frame(paste("crosswalks/importable_xw/icd9/",list.files("crosswalks/importable_xw/icd9/"),sep="")), 1, FUN=read.fwf, width=c(7,4), header=F, stringsAsFactors=F)
-icd10cc <- apply(data.frame(paste("crosswalks/importable_xw/icd10/",list.files("crosswalks/importable_xw/icd10/"),sep="")), 1, FUN=read.fwf, width=c(7,4), header=F, stringsAsFactors=F)
+icd9cc <- apply(data.frame(paste("crosswalks/importable_xw/icd9/",list.files("crosswalks/importable_xw/icd9/"),sep = "")), 1, FUN = read.fwf, width = c(7, 4), header = F, stringsAsFactors = F)
+icd10cc <- apply(data.frame(paste("crosswalks/importable_xw/icd10/",list.files("crosswalks/importable_xw/icd10/"),sep = "")), 1, FUN = read.fwf, width = c(7, 4), header = F, stringsAsFactors = F)
 
 # Create a vector of year names based on the file names in the icd folders
 years <- list()
-years$icd9 <- as.numeric(substr(list.files("crosswalks/importable_xw/icd9/"), 0,4))
-years$icd10 <- as.numeric(substr(list.files("crosswalks/importable_xw/icd10/"), 0,4))
+years$icd9 <- as.numeric(substr(list.files("crosswalks/importable_xw/icd9/"), 0, 4))
+years$icd10 <- as.numeric(substr(list.files("crosswalks/importable_xw/icd10/"), 0, 4))
 
 # assign year to each dataframe within the list of dataframes
-icd9cc <- mapply(cbind, icd9cc, "year" = years$icd9, SIMPLIFY=F)
-icd10cc <- mapply(cbind, icd10cc, "year" = years$icd10, SIMPLIFY=F)
+icd9cc <- mapply(cbind, icd9cc, "year" = years$icd9, SIMPLIFY = F)
+icd10cc <- mapply(cbind, icd10cc, "year" = years$icd10, SIMPLIFY = F)
 
 # Row bind icd9 and icd10 from different years into despective dataframes
 icd9cc <- do.call(rbind, icd9cc)
@@ -92,10 +92,10 @@ rm(extracodes)
 ######### Import Labels
 #############################################
 # Import HCC labels from all years
-labels <- apply(data.frame(paste("crosswalks/importable_xw/labels/",list.files("crosswalks/importable_xw/labels/"),sep="")), 1, FUN=readLines)
+labels <- apply(data.frame(paste("crosswalks/importable_xw/labels/",list.files("crosswalks/importable_xw/labels/"),sep = "")), 1, FUN = readLines)
 
 # Convert a single dataframe
-labels <- lapply(labels, as.data.frame, stringsAsFactors=F)
+labels <- lapply(labels, as.data.frame, stringsAsFactors = F)
 labels <- do.call(rbind, labels)
 
 # Extract HCC numbers
@@ -126,17 +126,17 @@ labels <- labels[order(labels$hccnum),]
 #############################################
 
 # import raw hierarchy files from CMS
-hierarchy <- apply(data.frame(paste("crosswalks/importable_xw/hierarchy/",list.files("crosswalks/importable_xw/hierarchy/"),sep="")), 1, FUN=readLines)
+hierarchy <- apply(data.frame(paste("crosswalks/importable_xw/hierarchy/",list.files("crosswalks/importable_xw/hierarchy/"),sep = "")), 1, FUN = readLines)
 
 # Create a vector of year names based on the file names in the icd folders
 years <- substr(list.files("crosswalks/importable_xw/hierarchy/"), 0,4)
 
 # Add year variable to each dataframe
-hierarchy <- mapply(cbind, hierarchy, "year" = years, SIMPLIFY=F)
+hierarchy <- mapply(cbind, hierarchy, "year" = years, SIMPLIFY = F)
 rm(years)
 
 # convert each item in the list of hierarchy objects into a data.frame and combine into a single DF
-hierarchy <- lapply(hierarchy, as.data.frame, stringsAsFactors=F)
+hierarchy <- lapply(hierarchy, as.data.frame, stringsAsFactors = F)
 hierarchy <- do.call(rbind, hierarchy)
 
 # convert years to numeric
@@ -154,7 +154,7 @@ todrop <- str_extract(hierarchy$condition,
                       "(?<=i\\=)([:print:]*)(?=;hcc)|(?<=STR\\()([:print:]*)(?= \\)\\);)")
 
 # convert it to a dataframe and bind it with the original hierarchy data
-todrop <- as.data.frame(str_split_fixed(todrop, ",", n=10), stringsAsFactors = F)
+todrop <- as.data.frame(str_split_fixed(todrop, ",", n = 10), stringsAsFactors = F)
 # convert to numeric
 todrop <- as.data.frame(lapply(todrop, as.numeric))
 
@@ -165,18 +165,18 @@ rm(todrop)
 # remove columns that are completely NA
 # intially, set up hiearchy to allow for up to 10 possible conditions, now will remove extra columns
 # In current data, maximum is 6 conditions to zero, however leaving room in case these are expanded in the future
-hierarchy <- hierarchy[,colSums(is.na(hierarchy))<nrow(hierarchy)]
+hierarchy <- hierarchy[, colSums(is.na(hierarchy)) < nrow(hierarchy)]
 
 #############################################
 ######### save data files
 #############################################
-save(labels, hierarchy, icdcc, file="data/icdcc.rda")
+save(labels, hierarchy, icdcc, file = "data/icd_hcc.RData")
 
 #############################################
 ######### Apply CCs
 #############################################
 # load CMS ICD/HCC crosswalks, labels, hierarchy rules
-load(file="data/icdcc.rda")
+load(file = "data/icd_hcc.RData")
 
 # Will apply this hierarchy to sample (random) patient data in wide format, with up to 25 diagnoses per patient
 
@@ -197,7 +197,7 @@ pt$admtdate <- as.Date(pt$admtdate)
 pt$year <- as.numeric(format(pt$admtdate, '%Y'))
 
 # merge CCs to patient data based on ICD/year/version, and drop ICD info
-pt <- merge(pt, icdcc, all.x=T)
+pt <- merge(pt, icdcc, all.x = T)
 rm(icdcc)
 
 # Convert CC to numeric and drop those with missing CC (not all ICDs resolve to a CC by definition)
@@ -224,7 +224,7 @@ todrop <- list()
 
 # create a list of dataframes that contain the CCs that will be zero'd out
 for (i in 1:6) {
-  todrop[[i]] <- pt[!is.na(pt$ifcc),c(3,4,5+i)]
+  todrop[[i]] <- pt[!is.na(pt$ifcc),c(3, 4, 5 + i)]
 }
 rm(i)
 
@@ -244,7 +244,7 @@ todrop <- todrop[!is.na(todrop$cc),]
 todrop$todrop <- T
 
 # merge drop flags with pt data
-pt <- merge(pt, todrop, all.x=T)
+pt <- merge(pt, todrop, all.x = T)
 rm(todrop)
 
 # drop flagged patients and keep columns of interest
