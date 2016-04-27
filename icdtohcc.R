@@ -168,8 +168,15 @@ rm(todrop)
 hierarchy <- hierarchy[,colSums(is.na(hierarchy))<nrow(hierarchy)]
 
 #############################################
+######### save data files
+#############################################
+save(labels, hierarchy, icdcc, file="data/icdcc.rda")
+
+#############################################
 ######### Apply CCs
 #############################################
+# load CMS ICD/HCC crosswalks, labels, hierarchy rules
+load(file="data/icdcc.rda")
 
 # Will apply this hierarchy to sample (random) patient data in wide format, with up to 25 diagnoses per patient
 
